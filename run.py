@@ -3,9 +3,11 @@
 
 Usage:
   python run.py dashboard                # launch the review/approve web UI
+  python run.py doctor                   # check Claude / image host / Instagram
   python run.py generate [TOPIC]         # draft + render one carousel
   python run.py list                     # show all carousels and status
   python run.py publish <CAROUSEL_ID>    # publish an approved carousel
+  python run.py publish <ID> --dry-run   # rehearse publish (host images, no post)
   python run.py sample                   # render a demo carousel (no API key)
 
 The dashboard is the main way to work. The CLI is handy for cron jobs and
@@ -47,15 +49,40 @@ def _cmd_list() -> None:
         print(f"{c.id}  {c.status.value:<9}  {c.content.topic:<14}  {title[:48]}")
 
 
+def _cmd_doctor() -> None:
+    from app import diagnostics
+
+    config = load_config()
+    print("Checking integrations…\n")
+    results = diagnostics.run_all(config)
+    for r in results:
+        print(f"  {r.icon}  {r.name:<26}  {r.detail}")
+    ready = all(r.ok for r in results)
+    print()
+    if ready:
+        print("All systems go. You can generate, approve, and publish.")
+    else:
+        print("Some checks failed — fix the above, then re-run `python run.py doctor`.")
+        print("(Generation only needs Claude; posting needs the image host + Instagram.)")
+
+
 def _cmd_publish(args: list[str]) -> None:
-    if not args:
-        print("Usage: python run.py publish <CAROUSEL_ID>")
+    positional = [a for a in args if not a.startswith("-")]
+    dry_run = "--dry-run" in args
+    if not positional:
+        print("Usage: python run.py publish <CAROUSEL_ID> [--dry-run]")
         sys.exit(1)
     config = load_config()
-    carousel = store.load(args[0])
+    carousel = store.load(positional[0])
     if not carousel:
-        print(f"No carousel with id {args[0]}")
+        print(f"No carousel with id {positional[0]}")
         sys.exit(1)
+    if dry_run:
+        urls = pipeline.dry_run_publish(config, carousel)
+        print("Dry run OK — images hosted, nothing posted. Public URLs:")
+        for u in urls:
+            print(f"  {u}")
+        return
     carousel = pipeline.publish(config, carousel)
     print(f"Published! {carousel.instagram_permalink}")
 
@@ -105,6 +132,7 @@ def main() -> None:
     cmd, rest = sys.argv[1], sys.argv[2:]
     dispatch = {
         "dashboard": lambda: _cmd_dashboard(),
+        "doctor": lambda: _cmd_doctor(),
         "generate": lambda: _cmd_generate(rest),
         "list": lambda: _cmd_list(),
         "publish": lambda: _cmd_publish(rest),

@@ -45,6 +45,17 @@ def rerender(config: Config, carousel: Carousel) -> Carousel:
     return carousel
 
 
+def dry_run_publish(config: Config, carousel: Carousel) -> list[str]:
+    """Rehearse publishing: host the images and return their public URLs, but
+    do NOT post to Instagram. Lets you validate image hosting end-to-end and
+    eyeball the exact URLs Instagram would receive."""
+    base = carousel_dir(carousel.id).parent
+    paths = [base / rel for rel in carousel.image_paths]
+    if not paths:
+        raise RuntimeError("No rendered images found — re-render the carousel first.")
+    return uploader.upload_all(paths, config)
+
+
 def publish(config: Config, carousel: Carousel) -> Carousel:
     """Host the rendered images and post the carousel to Instagram.
 

@@ -46,9 +46,12 @@ cp config.example.yaml config.yaml   # set your @handle, theme, topics
 # 3. See the visuals immediately — no API key needed
 python run.py sample
 
-# 4. Launch the dashboard
+# 4. Verify your credentials work (read-only — never posts)
+python run.py doctor
+
+# 5. Launch the dashboard
 python run.py dashboard
-#  → open http://localhost:5000
+#  → open http://localhost:5000  (the "Status" link shows the same checks)
 ```
 
 In the dashboard, click **+ Generate** (needs `ANTHROPIC_API_KEY`), review
@@ -117,31 +120,15 @@ The scheduler only **drafts** — you still approve. Two common options:
 0 8 * * *  cd /path/to/Claude-content-creator && /usr/bin/python3 scripts/generate_daily.py
 ```
 
-**GitHub Actions** (`.github/workflows/daily.yml`):
+**GitHub Actions** — a ready-to-use workflow ships at
+[`.github/workflows/daily-draft.yml`](.github/workflows/daily-draft.yml).
+It runs daily (and on demand), drafts a carousel, and uploads the rendered
+slides as a build artifact for review. To enable it: add an
+`ANTHROPIC_API_KEY` secret under *Settings → Secrets and variables →
+Actions*. It only drafts — it never posts.
 
-```yaml
-name: Daily carousel draft
-on:
-  schedule:
-    - cron: "0 8 * * *"     # 08:00 UTC daily
-  workflow_dispatch:
-jobs:
-  draft:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
-      - run: pip install -r requirements.txt
-      - run: python scripts/generate_daily.py
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      # Commit the new drafts back, or upload content/ as an artifact,
-      # so you can review them in the dashboard.
-```
-
-You then open the dashboard, review the morning's drafts, and approve the
-ones you like.
+You then open the dashboard, review the drafts, and approve the ones you
+like.
 
 ---
 
@@ -149,11 +136,27 @@ ones you like.
 
 ```bash
 python run.py sample              # render a demo carousel (no API key)
+python run.py doctor              # check Claude / image host / Instagram (read-only)
 python run.py generate [topic]    # draft + render one carousel
 python run.py list                # list all carousels and their status
 python run.py publish <id>        # publish an approved carousel
-python run.py dashboard           # launch the web UI
+python run.py publish <id> --dry-run   # host images, print URLs, post nothing
+python run.py dashboard           # launch the web UI (incl. a Status page)
 ```
+
+Before your first real post, run `publish <id> --dry-run` — it uploads the
+slides to your image host and prints the exact public URLs Instagram would
+receive, without posting. A great last sanity check.
+
+## Tests
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+The suite is fully offline (no API keys, no network): model round-trips,
+the store, rendering every theme, and the dashboard pages.
 
 ---
 

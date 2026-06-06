@@ -26,7 +26,7 @@ from flask import (
     url_for,
 )
 
-from . import pipeline, store
+from . import diagnostics, pipeline, store
 from .config import CONTENT_DIR, load_config
 from .models import CarouselContent, Slide, Status
 from .themes import theme_names
@@ -61,6 +61,12 @@ def create_app() -> Flask:
         return render_template(
             "index.html", carousels=carousels, counts=counts, active=status_filter
         )
+
+    # ── Status / health ────────────────────────────────────────────
+    @app.route("/status")
+    def status():
+        results = diagnostics.run_all(config)
+        return render_template("status.html", results=results, config=config)
 
     # ── Detail / edit ──────────────────────────────────────────────
     @app.route("/carousel/<carousel_id>")

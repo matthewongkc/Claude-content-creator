@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Status · Carousel Studio{% endblock %}
+{% block content %}
+
+<a class="back" href="{{ url_for('index') }}">← All carousels</a>
+<h2>Integration status</h2>
+<p class="muted">Read-only checks. Nothing here posts to Instagram.</p>
+
+<div class="status-list">
+  {% for r in results %}
+    <div class="status-row {{ 'ok' if r.ok else 'bad' }}">
+      <span class="dot">{{ r.icon }}</span>
+      <span class="sname">{{ r.name }}</span>
+      <span class="sdetail">{{ r.detail }}</span>
+    </div>
+  {% endfor %}
+</div>
+
+<div class="status-summary">
+  {% if config.can_generate %}
+    <p class="ok-text">✓ Generation is ready — you can draft carousels with Claude.</p>
+  {% else %}
+    <p class="bad-text">Set <code>ANTHROPIC_API_KEY</code> in <code>.env</code> to generate.</p>
+  {% endif %}
+  {% if config.can_publish %}
+    <p class="ok-text">✓ Auto-posting is enabled and configured.</p>
+  {% else %}
+    <p class="muted">Auto-posting is off. Set <code>auto_post_enabled: true</code> and your
+      <code>IG_*</code> keys to publish from here.</p>
+  {% endif %}
+</div>
+
+{% endblock %}

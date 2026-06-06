@@ -1,0 +1,40 @@
+# Drafts the day's carousel with Claude on a schedule, then uploads the
+# rendered slides as a build artifact so you can review them. It NEVER
+# posts to Instagram — you stay the gatekeeper and approve in the dashboard.
+#
+# Setup:
+#   1. Repo → Settings → Secrets and variables → Actions
+#   2. Add a secret: ANTHROPIC_API_KEY
+#   3. (optional) edit the cron below; times are UTC.
+name: Daily carousel draft
+
+on:
+  schedule:
+    - cron: "0 8 * * *" # 08:00 UTC daily
+  workflow_dispatch: {} # also run on demand from the Actions tab
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Draft today's carousel
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python scripts/generate_daily.py
+
+      - name: Upload rendered slides for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: carousel-drafts
+          path: content/
+          if-no-files-found: warn
+          retention-days: 14

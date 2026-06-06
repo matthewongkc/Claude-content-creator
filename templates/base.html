@@ -12,12 +12,15 @@
       <span class="logo">◆</span> Carousel Studio
       <span class="handle">{{ brand.handle }}</span>
     </a>
-    <form class="gen" action="{{ url_for('generate') }}" method="post">
-      <input type="text" name="topic" placeholder="Topic (blank = motivational/parenting)…" />
-      <button type="submit" {% if not can_generate %}disabled title="Set ANTHROPIC_API_KEY"{% endif %}>
-        + Generate
-      </button>
-    </form>
+    <div class="topactions">
+      <a class="statuslink" href="{{ url_for('status') }}">Status</a>
+      <form class="gen" action="{{ url_for('generate') }}" method="post">
+        <input type="text" name="topic" placeholder="Topic (blank = motivational/parenting)…" />
+        <button type="submit" {% if not can_generate %}disabled title="Set ANTHROPIC_API_KEY"{% endif %}>
+          + Generate
+        </button>
+      </form>
+    </div>
   </header>
 
   {% with messages = get_flashed_messages(with_categories=true) %}
