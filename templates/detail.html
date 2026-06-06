@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}{{ c.content.topic }} · Carousel Studio{% endblock %}
+{% block content %}
+
+<a class="back" href="{{ url_for('index') }}">← All carousels</a>
+
+<div class="detail">
+  <!-- Left: live slide previews -->
+  <section class="previews">
+    <div class="preview-head">
+      <span class="badge {{ c.status.value }}">{{ c.status.value }}</span>
+      <span class="muted">{{ c.id }}</span>
+    </div>
+    <div class="slides-strip">
+      {% for i in range(c.content.slides|length) %}
+        <figure>
+          <img src="{{ url_for('image', carousel_id=c.id, filename='slide_%02d.png'|format(i+1)) }}"
+               alt="slide {{ i+1 }}" />
+          <figcaption>{{ '%02d'|format(i+1) }} · {{ c.content.slides[i].kind }}</figcaption>
+        </figure>
+      {% endfor %}
+    </div>
+
+    {% if c.instagram_permalink %}
+      <p class="published-link">Live: <a href="{{ c.instagram_permalink }}" target="_blank">{{ c.instagram_permalink }}</a></p>
+    {% endif %}
+    {% if c.error %}
+      <p class="flash error">{{ c.error }}</p>
+    {% endif %}
+  </section>
+
+  <!-- Right: edit form + actions -->
+  <section class="editor">
+    <form method="post" action="{{ url_for('edit', carousel_id=c.id) }}">
+      <input type="hidden" name="slide_count" value="{{ c.content.slides|length }}" />
+
+      <div class="row2">
+        <label class="field">
+          <span>Topic</span>
+          <input type="text" name="topic" value="{{ c.content.topic }}" />
+        </label>
+        <label class="field">
+          <span>Theme</span>
+          <select name="theme">
+            {% for t in themes %}
+              <option value="{{ t }}" {{ 'selected' if t == c.theme }}>{{ t }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      </div>
+
+      <h3>Slides</h3>
+      {% for i in range(c.content.slides|length) %}
+        {% set slide = c.content.slides[i] %}
+        <fieldset class="slide-edit">
+          <legend>{{ '%02d'|format(i+1) }}
+            <select name="kind_{{ i }}">
+              {% for k in ['cover', 'point', 'cta'] %}
+                <option value="{{ k }}" {{ 'selected' if k == slide.kind }}>{{ k }}</option>
+              {% endfor %}
+            </select>
+          </legend>
+          <input type="text" name="title_{{ i }}" value="{{ slide.title }}" placeholder="Headline" />
+          <textarea name="body_{{ i }}" rows="2" placeholder="Supporting line (optional)">{{ slide.body }}</textarea>
+        </fieldset>
+      {% endfor %}
+
+      <h3>Caption</h3>
+      <textarea name="caption" rows="4" placeholder="Instagram caption (no hashtags)">{{ c.content.caption }}</textarea>
+
+      <h3>Hashtags</h3>
+      <textarea name="hashtags" rows="2" placeholder="space or comma separated, no # needed">{{ c.content.hashtags|join(' ') }}</textarea>
+
+      <button class="primary" type="submit">💾 Save &amp; re-render</button>
+    </form>
+
+    <div class="actions">
+      <form method="post" action="{{ url_for('approve', carousel_id=c.id) }}">
+        <button class="approve" {{ 'disabled' if c.status.value == 'approved' }}>✓ Approve</button>
+      </form>
+      <form method="post" action="{{ url_for('reject', carousel_id=c.id) }}">
+        <button class="reject">✕ Reject</button>
+      </form>
+      <form method="post" action="{{ url_for('publish', carousel_id=c.id) }}"
+            onsubmit="return confirm('Publish this carousel to Instagram now?');">
+        <button class="publish"
+          {% if not can_publish %}disabled title="Enable auto_post & set IG_* credentials"
+          {% elif require_approval and c.status.value != 'approved' %}disabled title="Approve it first"{% endif %}>
+          🚀 Publish
+        </button>
+      </form>
+    </div>
+    <p class="hint">
+      {% if not can_publish %}
+        Auto-posting is off. Turn on <code>auto_post_enabled</code> and add your <code>IG_*</code> keys to publish from here — or just download the slides and post manually.
+      {% elif require_approval %}
+        Approve a carousel to unlock Publish. You're the gatekeeper.
+      {% endif %}
+    </p>
+  </section>
+</div>
+
+{% endblock %}

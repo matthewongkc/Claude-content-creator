@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}Carousel Studio{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="{{ url_for('index') }}">
+      <span class="logo">◆</span> Carousel Studio
+      <span class="handle">{{ brand.handle }}</span>
+    </a>
+    <form class="gen" action="{{ url_for('generate') }}" method="post">
+      <input type="text" name="topic" placeholder="Topic (blank = motivational/parenting)…" />
+      <button type="submit" {% if not can_generate %}disabled title="Set ANTHROPIC_API_KEY"{% endif %}>
+        + Generate
+      </button>
+    </form>
+  </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flashes">
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <main>{% block content %}{% endblock %}</main>
+
+  <footer class="foot">
+    Claude drafts · you approve · Instagram publishes —
+    {% if can_publish %}auto-post <b>on</b>{% else %}auto-post <b>off</b> (generate &amp; review only){% endif %}
+  </footer>
+</body>
+</html>

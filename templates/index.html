@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+
+<nav class="filters">
+  <a href="{{ url_for('index') }}" class="{{ 'on' if not active }}">All</a>
+  {% for s in Status %}
+    <a href="{{ url_for('index', status=s.value) }}"
+       class="{{ 'on' if active == s.value }} chip {{ s.value }}">
+      {{ s.value }} <span class="num">{{ counts[s] }}</span>
+    </a>
+  {% endfor %}
+</nav>
+
+{% if not carousels %}
+  <div class="empty">
+    <p>No carousels yet.</p>
+    <p class="muted">Use <b>+ Generate</b> up top to draft your first one with Claude.</p>
+  </div>
+{% else %}
+  <div class="grid">
+    {% for c in carousels %}
+      <a class="card" href="{{ url_for('detail', carousel_id=c.id) }}">
+        <div class="thumb">
+          {% if c.image_paths %}
+            <img src="{{ url_for('image', carousel_id=c.id, filename='slide_01.png') }}" alt="cover" />
+          {% else %}
+            <div class="noimg">no preview</div>
+          {% endif %}
+          <span class="badge {{ c.status.value }}">{{ c.status.value }}</span>
+        </div>
+        <div class="cardbody">
+          <div class="topic">{{ c.content.topic }}</div>
+          <div class="cover-title">{{ c.content.slides[0].title if c.content.slides }}</div>
+          <div class="meta">{{ c.content.slides|length }} slides · {{ c.theme }}</div>
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+{% endif %}
+
+{% endblock %}

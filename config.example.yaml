@@ -1,0 +1,40 @@
+# ─────────────────────────────────────────────────────────────
+# Copy to config.yaml and tune to taste.
+#   cp config.example.yaml config.yaml
+# ─────────────────────────────────────────────────────────────
+
+brand:
+  # Your @handle, printed in the footer of every slide.
+  handle: "@yourbrand"
+  # Default visual theme. See app/themes.py for the full list:
+  #   midnight, sunrise, forest, plum, mono, ocean, ember
+  theme: "midnight"
+
+content:
+  # The model picks one of these when you don't pass an explicit
+  # topic to `generate`. Weighted by how often they appear here.
+  topics:
+    - "motivational"
+    - "motivational"
+    - "parenting"
+  # Slides per carousel (cover + points + closing CTA).
+  # Instagram allows up to 10 images per carousel.
+  slides_per_carousel: 7
+  # Claude model used to draft the copy.
+  model: "claude-opus-4-8"
+
+schedule:
+  # Informational — used by scripts/generate_daily and the README
+  # cron examples. The actual schedule is driven by your cron / CI.
+  posts_per_day: 1
+  preferred_time: "08:00"
+
+publishing:
+  # If false, the dashboard's "Publish" button is disabled and the
+  # pipeline only generates drafts for you to download & post by hand.
+  # Flip to true once your IG_* credentials are working.
+  auto_post_enabled: false
+  # Require explicit approval in the dashboard before anything can be
+  # published. Keep this true — it's the whole "you're the gatekeeper"
+  # promise.
+  require_approval: true
