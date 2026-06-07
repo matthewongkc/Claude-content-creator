@@ -97,6 +97,26 @@ def test_all_themes_render(tmp_path, theme):
     assert len(paths) == 3
 
 
+def test_github_remote_path():
+    from app import uploader
+    from app.config import load_config
+
+    cfg = load_config()
+    cfg.secrets.github_image_dir = "carousels"
+    p = Path("content/abc123/slide_02.png")
+    assert uploader._github_remote_path(p, cfg) == "carousels/abc123/slide_02.png"
+
+
+def test_unknown_image_host_raises():
+    from app import uploader
+    from app.config import load_config
+
+    cfg = load_config()
+    cfg.secrets.image_host = "nope"
+    with pytest.raises(uploader.UploadError):
+        uploader.upload_image(Path("x.png"), cfg)
+
+
 def test_dashboard_pages(tmp_path, monkeypatch):
     import app.dashboard as dash
     import app.config as cfg

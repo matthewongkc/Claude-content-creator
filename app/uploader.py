@@ -4,11 +4,11 @@ Instagram's Graph API does not accept raw image bytes for feed posts — it
 fetches each image from a public `image_url`. So before publishing we host
 the PNGs somewhere reachable and hand Instagram the URLs.
 
-Two pluggable backends:
-  * imgbb       — free, one API key, simplest to start with.
-  * cloudinary  — if you already use it; unsigned-or-signed upload.
-
-Pick one with IMAGE_HOST in your .env.
+Pluggable backends (pick one with IMAGE_HOST in your .env):
+  * github      — commit slides to a PUBLIC repo, serve via raw URLs. Free,
+                  no extra signup if you already use GitHub.
+  * cloudinary  — real CDN, generous free tier; signed upload.
+  * imgbb       — free API key, simplest single-key option.
 """
 
 from __future__ import annotations
@@ -71,16 +71,72 @@ def _upload_cloudinary(path: Path, cfg: Config) -> str:
     return url
 
 
+GITHUB_API = "https://api.github.com"
+
+
+def _github_remote_path(path: Path, cfg: Config) -> str:
+    """carousels/<carousel-id>/slide_NN.png — groups slides by carousel."""
+    prefix = (cfg.secrets.github_image_dir or "carousels").strip("/")
+    return f"{prefix}/{path.parent.name}/{path.name}"
+
+
+def _upload_github(path: Path, cfg: Config) -> str:
+    """Commit one image to a public repo via the Contents API; return its raw URL.
+
+    The repo MUST be public — Instagram fetches the raw URL with no auth.
+    Re-uploading the same path updates the file in place (idempotent).
+    """
+    repo = cfg.secrets.github_image_repo
+    token = cfg.secrets.github_token
+    if not (repo and token and "/" in repo):
+        raise UploadError("GITHUB_IMAGE_REPO (owner/repo) and GITHUB_TOKEN must be set.")
+
+    branch = cfg.secrets.github_image_branch or "main"
+    remote_path = _github_remote_path(path, cfg)
+    url = f"{GITHUB_API}/repos/{repo}/contents/{remote_path}"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+
+    # If the file already exists we must pass its blob sha to update it.
+    sha = None
+    existing = requests.get(url, headers=headers, params={"ref": branch}, timeout=30)
+    if existing.status_code == 200:
+        sha = existing.json().get("sha")
+
+    content_b64 = base64.b64encode(path.read_bytes()).decode()
+    payload = {
+        "message": f"carousel: add {remote_path}",
+        "content": content_b64,
+        "branch": branch,
+    }
+    if sha:
+        payload["sha"] = sha
+
+    resp = requests.put(url, headers=headers, json=payload, timeout=60)
+    if resp.status_code not in (200, 201):
+        raise UploadError(f"GitHub upload failed ({resp.status_code}): {resp.text[:200]}")
+
+    download_url = resp.json().get("content", {}).get("download_url")
+    if not download_url:
+        raise UploadError(f"GitHub returned no download_url: {resp.text[:200]}")
+    return download_url
+
+
 def upload_image(path: Path, cfg: Config) -> str:
     """Upload one image and return its public URL."""
     host = (cfg.secrets.image_host or "imgbb").lower()
+    if host == "github":
+        return _upload_github(path, cfg)
     if host == "imgbb":
         if not cfg.secrets.imgbb_api_key:
             raise UploadError("IMGBB_API_KEY is not set in .env.")
         return _upload_imgbb(path, cfg.secrets.imgbb_api_key)
     if host == "cloudinary":
         return _upload_cloudinary(path, cfg)
-    raise UploadError(f"Unknown IMAGE_HOST '{host}'. Use 'imgbb' or 'cloudinary'.")
+    raise UploadError(f"Unknown IMAGE_HOST '{host}'. Use 'github', 'cloudinary', or 'imgbb'.")
 
 
 def upload_all(paths: list[Path], cfg: Config) -> list[str]:

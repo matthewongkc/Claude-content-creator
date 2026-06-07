@@ -70,6 +70,10 @@ class Secrets:
     cloudinary_cloud_name: str | None = None
     cloudinary_api_key: str | None = None
     cloudinary_api_secret: str | None = None
+    github_token: str | None = None
+    github_image_repo: str | None = None
+    github_image_branch: str = "main"
+    github_image_dir: str = "carousels"
     dashboard_secret: str = "dev-secret-change-me"
 
 
@@ -122,6 +126,10 @@ def load_config() -> Config:
         cloudinary_cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
         cloudinary_api_key=os.getenv("CLOUDINARY_API_KEY"),
         cloudinary_api_secret=os.getenv("CLOUDINARY_API_SECRET"),
+        github_token=os.getenv("GITHUB_TOKEN"),
+        github_image_repo=os.getenv("GITHUB_IMAGE_REPO"),
+        github_image_branch=os.getenv("GITHUB_IMAGE_BRANCH", "main"),
+        github_image_dir=os.getenv("GITHUB_IMAGE_DIR", "carousels"),
         dashboard_secret=os.getenv("DASHBOARD_SECRET", "dev-secret-change-me"),
     )
 

@@ -48,8 +48,39 @@ def check_claude(cfg: Config) -> CheckResult:
 
 
 def check_image_host(cfg: Config) -> CheckResult:
-    """Verify the image host by uploading a 1x1 PNG that auto-expires."""
+    """Verify the configured image host. Read-only / self-cleaning per backend."""
     host = (cfg.secrets.image_host or "imgbb").lower()
+    if host == "github":
+        repo = cfg.secrets.github_image_repo
+        token = cfg.secrets.github_token
+        if not (repo and token and "/" in repo):
+            return CheckResult(
+                "Image host (github)", False, "set GITHUB_IMAGE_REPO (owner/repo) + GITHUB_TOKEN"
+            )
+        try:
+            resp = requests.get(
+                f"https://api.github.com/repos/{repo}",
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Accept": "application/vnd.github+json",
+                },
+                timeout=30,
+            )
+            if resp.status_code != 200:
+                return CheckResult("Image host (github)", False, f"{resp.status_code}: {resp.text[:120]}")
+            data = resp.json()
+            if data.get("private", True):
+                return CheckResult(
+                    "Image host (github)", False,
+                    f"{repo} is private — Instagram can't fetch raw URLs. Make it public.",
+                )
+            if not data.get("permissions", {}).get("push", False):
+                return CheckResult(
+                    "Image host (github)", False, f"token lacks push access to {repo}"
+                )
+            return CheckResult("Image host (github)", True, f"{repo} public + writable")
+        except Exception as exc:  # noqa: BLE001
+            return CheckResult("Image host (github)", False, str(exc)[:160])
     if host == "imgbb":
         if not cfg.secrets.imgbb_api_key:
             return CheckResult("Image host (imgbb)", False, "IMGBB_API_KEY not set")

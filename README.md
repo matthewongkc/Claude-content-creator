@@ -100,8 +100,17 @@ One-time setup:
 
 > **Why image hosting?** The Graph API fetches each slide from a public
 > `image_url` — it won't take raw bytes. So the rendered PNGs are uploaded
-> to an image host first. Set `IMAGE_HOST=imgbb` (free; get a key at
-> <https://api.imgbb.com/>) or `cloudinary` and fill the matching keys.
+> somewhere public first. Choose with `IMAGE_HOST`:
+>
+> | `IMAGE_HOST` | What it does | Setup |
+> | --- | --- | --- |
+> | `github` (default) | Commits slides to a **public** repo, serves via `raw.githubusercontent.com`. No extra signup. | `GITHUB_TOKEN` (PAT with Contents read/write) + `GITHUB_IMAGE_REPO=owner/repo` (must be public) |
+> | `cloudinary` | Real CDN, generous free tier. | `CLOUDINARY_CLOUD_NAME` / `API_KEY` / `API_SECRET` |
+> | `imgbb` | Single free API key. | `IMGBB_API_KEY` (free at api.imgbb.com) |
+>
+> For `github`: the image repo must be **public** (Instagram fetches the
+> raw URL with no auth). Use a separate repo from your code if you'd rather
+> not mix generated images into it.
 
 **Prefer to post by hand?** Leave `auto_post_enabled: false`. You'll still
 get fully rendered slides under `content/<id>/` — just download and upload
