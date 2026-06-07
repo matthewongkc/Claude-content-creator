@@ -64,6 +64,7 @@ class Carousel:
     created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     updated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     image_paths: list[str] = field(default_factory=list)
+    cover_image: str | None = None  # filename of the cover photo inside the carousel dir
     instagram_permalink: str | None = None
     error: str | None = None
 
@@ -91,6 +92,7 @@ class Carousel:
             created_at=d.get("created_at", datetime.now(timezone.utc).isoformat()),
             updated_at=d.get("updated_at", datetime.now(timezone.utc).isoformat()),
             image_paths=d.get("image_paths", []),
+            cover_image=d.get("cover_image"),
             instagram_permalink=d.get("instagram_permalink"),
             error=d.get("error"),
         )

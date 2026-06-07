@@ -141,6 +141,38 @@ def _draw_lines(
     return y
 
 
+def _circular_avatar(src: Path, size: int, ring: RGB) -> Image.Image:
+    """Center-crop `src` to a circle of `size` px with an accent ring.
+
+    Returns an RGBA image; supersampled for smooth (anti-aliased) edges.
+    """
+    scale = 4  # render big, then downsample for clean edges
+    big = size * scale
+
+    photo = Image.open(src).convert("RGB")
+    # Center-crop to a square.
+    w, h = photo.size
+    side = min(w, h)
+    left, top = (w - side) // 2, (h - side) // 2
+    photo = photo.crop((left, top, left + side, top + side)).resize((big, big), Image.LANCZOS)
+
+    # Circular mask.
+    mask = Image.new("L", (big, big), 0)
+    ImageDraw.Draw(mask).ellipse((0, 0, big, big), fill=255)
+
+    canvas = Image.new("RGBA", (big, big), (0, 0, 0, 0))
+    canvas.paste(photo, (0, 0), mask)
+
+    # Accent ring around the edge.
+    ring_w = max(2, big // 40)
+    ImageDraw.Draw(canvas).ellipse(
+        (ring_w // 2, ring_w // 2, big - ring_w // 2, big - ring_w // 2),
+        outline=(*ring, 255),
+        width=ring_w,
+    )
+    return canvas.resize((size, size), Image.LANCZOS)
+
+
 def _draw_progress_dots(draw: ImageDraw.ImageDraw, theme: Theme, index: int, total: int) -> None:
     r = 7
     gap = 26
@@ -163,7 +195,14 @@ def _draw_footer(draw: ImageDraw.ImageDraw, theme: Theme, handle: str, index: in
 
 
 # ── Per-slide rendering ─────────────────────────────────────────────
-def _render_slide(slide: Slide, theme: Theme, handle: str, index: int, total: int) -> Image.Image:
+def _render_slide(
+    slide: Slide,
+    theme: Theme,
+    handle: str,
+    index: int,
+    total: int,
+    cover_image_path: Path | None = None,
+) -> Image.Image:
     img = _gradient(theme.bg_top, theme.bg_bottom)
     draw = ImageDraw.Draw(img)
 
@@ -173,8 +212,21 @@ def _render_slide(slide: Slide, theme: Theme, handle: str, index: int, total: in
     is_cover = slide.kind == "cover"
     is_cta = slide.kind == "cta"
 
+    # On the cover, drop in a circular portrait above the headline (if given).
+    has_photo = is_cover and cover_image_path is not None and cover_image_path.exists()
+    if has_photo:
+        avatar_size = 300
+        avatar = _circular_avatar(cover_image_path, avatar_size, theme.accent)
+        ax = (WIDTH - avatar_size) // 2
+        img.paste(avatar, (ax, 168), avatar)
+        draw = ImageDraw.Draw(img)  # refresh after paste
+
     # Cover & CTA slides get bigger, more centered headlines.
-    if is_cover:
+    if is_cover and has_photo:
+        title_start, title_min = 104, 56
+        title_box_h = 430
+        top_y = 540
+    elif is_cover:
         title_start, title_min = 118, 60
         title_box_h = 560
         top_y = 360
@@ -225,9 +277,14 @@ def render_carousel(carousel: Carousel, out_dir: Path, handle: str) -> list[Path
     slides = carousel.content.slides
     total = len(slides)
 
+    cover_path = (out_dir / carousel.cover_image) if carousel.cover_image else None
+
     paths: list[Path] = []
     for i, slide in enumerate(slides):
-        img = _render_slide(slide, theme, handle, i, total)
+        img = _render_slide(
+            slide, theme, handle, i, total,
+            cover_image_path=cover_path if i == 0 else None,
+        )
         path = out_dir / f"slide_{i + 1:02d}.png"
         img.save(path, "PNG")
         paths.append(path)

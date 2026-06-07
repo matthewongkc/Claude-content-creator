@@ -108,8 +108,24 @@ def create_app() -> Flask:
         # Editing a published/rejected item sends it back to review.
         if carousel.status in (Status.PUBLISHED, Status.REJECTED, Status.FAILED):
             carousel.status = Status.PENDING
-        store.save(carousel)
-        pipeline.rerender(config, carousel)
+
+        # Optional cover photo upload.
+        photo = request.files.get("cover_photo")
+        if photo and photo.filename:
+            from pathlib import Path
+            from tempfile import NamedTemporaryFile
+
+            suffix = Path(photo.filename).suffix.lower() or ".png"
+            with NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+                photo.save(tmp.name)
+                tmp_path = Path(tmp.name)
+            carousel.content = carousel.content  # no-op for clarity
+            store.save(carousel)
+            pipeline.set_cover_image(config, carousel, tmp_path)
+            tmp_path.unlink(missing_ok=True)
+        else:
+            store.save(carousel)
+            pipeline.rerender(config, carousel)
         flash("Saved and re-rendered.", "ok")
         return redirect(url_for("detail", carousel_id=carousel_id))
 

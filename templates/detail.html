@@ -31,7 +31,7 @@
 
   <!-- Right: edit form + actions -->
   <section class="editor">
-    <form method="post" action="{{ url_for('edit', carousel_id=c.id) }}">
+    <form method="post" action="{{ url_for('edit', carousel_id=c.id) }}" enctype="multipart/form-data">
       <input type="hidden" name="slide_count" value="{{ c.content.slides|length }}" />
 
       <div class="row2">
@@ -64,6 +64,10 @@
           <textarea name="body_{{ i }}" rows="2" placeholder="Supporting line (optional)">{{ slide.body }}</textarea>
         </fieldset>
       {% endfor %}
+
+      <h3>Cover photo {% if c.cover_image %}<span class="muted">(set — upload to replace)</span>{% endif %}</h3>
+      <input type="file" name="cover_photo" accept="image/*" />
+      <p class="hint">Optional. Shown as a circular portrait above the cover headline.</p>
 
       <h3>Caption</h3>
       <textarea name="caption" rows="4" placeholder="Instagram caption (no hashtags)">{{ c.content.caption }}</textarea>

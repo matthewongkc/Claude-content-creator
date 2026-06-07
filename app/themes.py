@@ -47,6 +47,14 @@ THEMES: dict[str, Theme] = {
         muted=(74, 38, 48),
         accent=(255, 255, 255),
     ),
+    "sunny": Theme(
+        name="sunny",
+        bg_top=(255, 224, 130),   # warm sunlight gold
+        bg_bottom=(255, 159, 67),  # soft orange
+        text=(60, 36, 12),         # deep warm brown, high contrast on gold
+        muted=(120, 78, 38),
+        accent=(229, 57, 53),      # vivid coral-red pop
+    ),
     "forest": Theme(
         name="forest",
         bg_top=(20, 58, 47),

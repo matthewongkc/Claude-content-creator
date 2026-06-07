@@ -36,6 +36,22 @@ def create_from_content(config: Config, content: CarouselContent, theme: str | N
     return carousel
 
 
+def set_cover_image(config: Config, carousel: Carousel, src: Path) -> Carousel:
+    """Copy a photo into the carousel folder, set it as the cover portrait,
+    and re-render so the cover slide shows it."""
+    import shutil
+
+    dest_name = f"cover_source{src.suffix.lower() or '.png'}"
+    dest = carousel_dir(carousel.id) / dest_name
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if src.resolve() != dest.resolve():
+        shutil.copyfile(src, dest)
+    carousel.cover_image = dest_name
+    store.save(carousel)
+    rerender(config, carousel)
+    return carousel
+
+
 def rerender(config: Config, carousel: Carousel) -> Carousel:
     """(Re)render slide images for a carousel and persist the paths."""
     out_dir = carousel_dir(carousel.id)
