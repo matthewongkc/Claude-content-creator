@@ -269,22 +269,120 @@ def _render_slide(
     return img
 
 
+# ── Editorial template ("paper" theme) ──────────────────────────────
+# Clean magazine look: cream background, heavy black headline, orange
+# kicker + handle, thin rule, warm-gray body. Left-aligned, top-anchored.
+def _tracked_text(
+    draw: ImageDraw.ImageDraw,
+    pos: tuple[int, int],
+    text: str,
+    font: ImageFont.FreeTypeFont,
+    fill: RGB,
+    tracking: float,
+) -> None:
+    """Draw text with extra letter-spacing (Pillow has no native tracking)."""
+    x, y = pos
+    for ch in text:
+        draw.text((x, y), ch, font=font, fill=fill)
+        x += draw.textlength(ch, font=font) + tracking
+
+
+def _render_editorial(
+    slide: Slide,
+    theme: Theme,
+    handle: str,
+    index: int,
+    total: int,
+    kicker: str,
+    cover_image_path: Path | None = None,
+) -> Image.Image:
+    img = Image.new("RGB", (WIDTH, HEIGHT), theme.bg_top)
+    draw = ImageDraw.Draw(img)
+    content_w = WIDTH - 2 * MARGIN
+    is_cover = slide.kind == "cover"
+    rule_color = (214, 209, 198)
+
+    # Kicker (tracked, uppercase, orange) — the running series label.
+    ky = MARGIN + 36
+    kfont = _load_font(32, bold=True)
+    _tracked_text(draw, (MARGIN, ky), kicker.upper(), kfont, theme.accent, 6)
+
+    # Small circular portrait, top-right, on the cover only.
+    if is_cover and cover_image_path is not None and cover_image_path.exists():
+        a = 132
+        avatar = _circular_avatar(cover_image_path, a, theme.accent)
+        img.paste(avatar, (WIDTH - MARGIN - a, ky - 50), avatar)
+        draw = ImageDraw.Draw(img)
+
+    # Thin rule under the kicker.
+    ry = ky + 58
+    draw.line([(MARGIN, ry), (WIDTH - MARGIN, ry)], fill=rule_color, width=2)
+
+    # Headline — heavy black, left-aligned, tight leading, top-anchored.
+    cursor_y = ry + 72
+    if is_cover:
+        h_start, h_min, h_box = 122, 64, 660
+    else:
+        h_start, h_min, h_box = 100, 54, 600
+    title_font, title_lines = _fit_text(
+        draw, slide.title, content_w, h_box, h_start, h_min, bold=True, line_spacing=1.05,
+    )
+    cursor_y = _draw_lines(draw, title_lines, title_font, MARGIN, cursor_y, theme.text, line_spacing=1.05)
+
+    # Body — warm gray.
+    if slide.body.strip():
+        cursor_y += 40
+        body_font, body_lines = _fit_text(
+            draw, slide.body, content_w, 360, 50, 32, bold=False, line_spacing=1.3,
+        )
+        cursor_y = _draw_lines(draw, body_lines, body_font, MARGIN, cursor_y, theme.muted, line_spacing=1.3)
+
+    # Cover gets a small black "swipe" prompt, echoing the reference style.
+    if is_cover:
+        prompt_font = _load_font(40, bold=True)
+        draw.text((MARGIN, cursor_y + 22), "Swipe →", font=prompt_font, fill=theme.text)
+
+    # Footer: progress dots bottom-left, handle bottom-right in orange.
+    dot_r, gap = 6, 24
+    dy = HEIGHT - MARGIN - 4
+    dx = MARGIN + dot_r
+    for i in range(total):
+        color = theme.accent if i <= index else rule_color
+        draw.ellipse([dx - dot_r, dy - dot_r, dx + dot_r, dy + dot_r], fill=color)
+        dx += gap
+
+    hfont = _load_font(34, bold=True)
+    hw = draw.textlength(handle, font=hfont)
+    draw.text((WIDTH - MARGIN - hw, HEIGHT - MARGIN - 18), handle, font=hfont, fill=theme.accent)
+    return img
+
+
 # ── Public API ──────────────────────────────────────────────────────
+def _kicker_for(topic: str) -> str:
+    """A short running series label from the topic."""
+    t = topic.strip().lower()
+    presets = {"motivational": "MOTIVATION", "parenting": "PARENTING"}
+    return presets.get(t, topic.strip().upper())
+
+
 def render_carousel(carousel: Carousel, out_dir: Path, handle: str) -> list[Path]:
     """Render every slide to a PNG; returns the file paths in order."""
     out_dir.mkdir(parents=True, exist_ok=True)
     theme = get_theme(carousel.theme)
     slides = carousel.content.slides
     total = len(slides)
+    editorial = carousel.theme == "paper"
+    kicker = _kicker_for(carousel.content.topic)
 
     cover_path = (out_dir / carousel.cover_image) if carousel.cover_image else None
 
     paths: list[Path] = []
     for i, slide in enumerate(slides):
-        img = _render_slide(
-            slide, theme, handle, i, total,
-            cover_image_path=cover_path if i == 0 else None,
-        )
+        cover_arg = cover_path if i == 0 else None
+        if editorial:
+            img = _render_editorial(slide, theme, handle, i, total, kicker, cover_arg)
+        else:
+            img = _render_slide(slide, theme, handle, i, total, cover_image_path=cover_arg)
         path = out_dir / f"slide_{i + 1:02d}.png"
         img.save(path, "PNG")
         paths.append(path)

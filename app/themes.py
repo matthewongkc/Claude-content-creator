@@ -79,6 +79,15 @@ THEMES: dict[str, Theme] = {
         muted=(82, 82, 91),
         accent=(24, 24, 27),
     ),
+    "paper": Theme(
+        name="paper",
+        # Flat warm cream (editorial look — no gradient).
+        bg_top=(244, 241, 233),
+        bg_bottom=(244, 241, 233),
+        text=(23, 23, 23),       # near-black heavy headlines
+        muted=(122, 120, 114),   # warm gray body
+        accent=(227, 83, 54),    # editorial orange
+    ),
     "ocean": Theme(
         name="ocean",
         bg_top=(8, 47, 73),
