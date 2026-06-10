@@ -359,10 +359,27 @@ def _render_editorial(
 
 # ── Public API ──────────────────────────────────────────────────────
 def _kicker_for(topic: str) -> str:
-    """A short running series label from the topic."""
-    t = topic.strip().lower()
+    """A short, clean running series label derived from the topic.
+
+    Topics can be long sentences; the kicker must stay short so it doesn't
+    overflow or collide with the cover portrait. We take the text before any
+    colon/dash, then keep whole words up to ~16 characters.
+    """
+    import re
+
+    t = topic.strip()
     presets = {"motivational": "MOTIVATION", "parenting": "PARENTING"}
-    return presets.get(t, topic.strip().upper())
+    if t.lower() in presets:
+        return presets[t.lower()]
+
+    head = re.split(r"[:\.–—\-]", t)[0].strip()
+    label, words = "", head.split()
+    for w in words:
+        candidate = (label + " " + w).strip()
+        if len(candidate) > 16 and label:
+            break
+        label = candidate
+    return (label or head).upper()
 
 
 def render_carousel(carousel: Carousel, out_dir: Path, handle: str) -> list[Path]:
